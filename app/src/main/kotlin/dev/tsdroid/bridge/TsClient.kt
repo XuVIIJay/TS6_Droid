@@ -80,13 +80,38 @@ class TsClient {
     ) = withContext(Dispatchers.IO) {
         disconnect()
         serverAddress = address
-        dev.tsdroid.AppLogger.i(TAG, "Creating client: addr=$address nick=$nickname channel=${channel ?: "(none)"}")
+
+        // Log identity details for diagnostics
+        val uid = identity.uniqueId ?: "null"
+        val secLevel = identity.securityLevel
+        dev.tsdroid.AppLogger.i(TAG, "Identity: uid=${uid.take(16)}... level=$secLevel")
+
+        // Quick DNS / TCP reachability check before native call
+        val addrParts = address.split(":")
+        val host = addrParts[0]
+        val port = addrParts.getOrElse(1) { "9987" }.toIntOrNull() ?: 9987
+        dev.tsdroid.AppLogger.i(TAG, "Resolving: host=$host port=$port")
+        try {
+            val inet = java.net.InetAddress.getByName(host)
+            dev.tsdroid.AppLogger.i(TAG, "DNS resolved: $host → ${inet.hostAddress}")
+            val sock = java.net.Socket()
+            sock.connect(java.net.InetSocketAddress(inet, port), 5000)
+            sock.close()
+            dev.tsdroid.AppLogger.i(TAG, "TCP connect OK: $host:$port reachable")
+        } catch (e: Exception) {
+            dev.tsdroid.AppLogger.w(TAG, "Pre-connect check failed: ${e.message}")
+        }
+
+        dev.tsdroid.AppLogger.i(TAG, "Creating Client: addr=$address nick=$nickname pw=${if (password != null) "yes" else "no"} channel=${channel ?: "(none)"}")
+        val t0 = System.currentTimeMillis()
         val c = Client(address, identity, nickname, password, channel)
+        val t1 = System.currentTimeMillis()
+        dev.tsdroid.AppLogger.i(TAG, "Client() constructor OK (${t1 - t0}ms), ptr valid, calling waitConnected...")
         client = c
         _state.value = ConnectionState.CONNECTING
-        dev.tsdroid.AppLogger.i(TAG, "Calling waitConnected...")
         c.waitConnected()
-        dev.tsdroid.AppLogger.i(TAG, "waitConnected returned OK")
+        val t2 = System.currentTimeMillis()
+        dev.tsdroid.AppLogger.i(TAG, "waitConnected OK (blocked ${t2 - t1}ms, total ${t2 - t0}ms)")
         _state.value = ConnectionState.CONNECTED
         val users = c.users
         val channels = c.channels

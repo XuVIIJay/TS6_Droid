@@ -100,6 +100,7 @@ private fun ChannelRow(
     val spacer = remember(channel.name) { parseSpacer(channel.name) }
 
     if (spacer != null) {
+        Log.d("ChannelTree", "ChannelRow: spacer '${channel.name}' → ${spacer.type} text='${spacer.displayText}'")
         SpacerChannelRow(spacer, depth)
     } else {
         Row(

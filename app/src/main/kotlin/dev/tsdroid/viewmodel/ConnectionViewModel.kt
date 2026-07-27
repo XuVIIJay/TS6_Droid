@@ -291,11 +291,15 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
     private fun getOrCreateIdentity(): Identity {
         val context = getApplication<Application>()
         val identityFile = File(context.filesDir, "identity.ini")
+        dev.tsdroid.AppLogger.i("ConnVM", "Loading identity: path=${identityFile.absolutePath} exists=${identityFile.exists()} size=${identityFile.length()}")
         return if (identityFile.exists()) {
-            Identity.load(identityFile.absolutePath)
+            val id = Identity.load(identityFile.absolutePath)
+            dev.tsdroid.AppLogger.i("ConnVM", "Identity loaded: uid=${id.uniqueId?.take(16)}... level=${id.securityLevel}")
+            id
         } else {
             val identity = Identity()
             identity.save(identityFile.absolutePath)
+            dev.tsdroid.AppLogger.i("ConnVM", "New identity created: uid=${identity.uniqueId?.take(16)}... level=${identity.securityLevel}")
             identity
         }
     }

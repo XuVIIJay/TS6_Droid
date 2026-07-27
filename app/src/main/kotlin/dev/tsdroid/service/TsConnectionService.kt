@@ -101,8 +101,11 @@ class TsConnectionService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     fun connect(address: String, identity: Identity, nickname: String, password: String?, channel: String?) {
+        dev.tsdroid.AppLogger.i(TAG, "Service connecting: addr=$address nick=$nickname")
         serviceScope.launch {
+            dev.tsdroid.AppLogger.i(TAG, "Launching tsClient.connect() on IO dispatcher...")
             tsClient.connect(address, identity, nickname, password, channel)
+            dev.tsdroid.AppLogger.i(TAG, "tsClient.connect() returned, starting audio capture...")
             audioBridge.startCapture(serviceScope)
             // Sync initial mute state with server (PTT starts muted)
             if (audioBridge.isMuted.value) {

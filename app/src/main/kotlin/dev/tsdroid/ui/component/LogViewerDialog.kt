@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -102,15 +103,17 @@ fun LogViewerDialog(
                     val content = remember(selectedFile) {
                         try { selectedFile!!.readText() } catch (_: Exception) { "(empty or unreadable)" }
                     }
-                    Text(
-                        text = content,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = content,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(16.dp)
+                                .verticalScroll(rememberScrollState()),
+                            fontFamily = FontFamily.Monospace,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 } else {
                     // File list
                     LazyColumn(modifier = Modifier.weight(1f)) {

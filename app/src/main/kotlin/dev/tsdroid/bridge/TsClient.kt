@@ -128,6 +128,9 @@ class TsClient {
             c.waitConnected()
             val t2 = System.currentTimeMillis()
             dev.tsdroid.AppLogger.i(TAG, "waitConnected OK (blocked ${t2 - t1}ms, total ${t2 - t0}ms)")
+            // Force full state sync to get users from ALL channels, not just current
+            c.syncState()
+            dev.tsdroid.AppLogger.i(TAG, "syncState OK, fetching users...")
             _state.value = ConnectionState.CONNECTED
             val users = c.users
             val channels = c.channels

@@ -1,7 +1,7 @@
 package dev.tsdroid.ui.component
 
 private val SPACER_REGEX = Regex(
-    """^\[([clr*]?)[sS][pP][aA][cC][eE][rR](\d+)\](.*)"""
+    """^\[([clr*]?)[sS][pP][aA][cC][eE][rR](\d*)\](.*)"""
 )
 
 enum class SpacerType { LEFT, CENTER, RIGHT, REPEAT }

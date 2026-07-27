@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.tslib.Channel
 import dev.tslib.ChannelTree as JChannelTree
@@ -186,6 +187,8 @@ private fun SpacerChannelRow(spacer: SpacerInfo, depth: Int) {
                     text = spacer.displayText.ifEmpty { " " },
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = align,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -64,6 +64,7 @@ class TsClient {
     private val fileListCallbacks = ConcurrentHashMap<String, CompletableDeferred<List<TsFileEntry>>>()
 
     private val eventLoopRunning = AtomicBoolean(false)
+    private val connecting = AtomicBoolean(false)
 
     val isConnected: Boolean
         get() = client?.isConnected == true
@@ -78,7 +79,14 @@ class TsClient {
         password: String? = null,
         channel: String? = null,
     ) = withContext(Dispatchers.IO) {
-        disconnect()
+        // Guard against multiple simultaneous connection attempts
+        if (!connecting.compareAndSet(false, true)) {
+            dev.tsdroid.AppLogger.w(TAG, "Connection already in progress, ignoring duplicate request")
+            return@withContext
+        }
+        try {
+        _state.value = ConnectionState.CONNECTING
+        disconnect(updateState = false)
         serverAddress = address
 
         // Log identity details for diagnostics
@@ -104,29 +112,54 @@ class TsClient {
 
         dev.tsdroid.AppLogger.i(TAG, "Creating Client: addr=$address nick=$nickname pw=${if (password != null) "yes" else "no"} channel=${channel ?: "(none)"}")
         val t0 = System.currentTimeMillis()
-        val c = Client(address, identity, nickname, password, channel)
+        val c: Client
+        try {
+            c = Client(address, identity, nickname, password, channel)
+        } catch (e: Exception) {
+            dev.tsdroid.AppLogger.e(TAG, "Client() constructor failed: ${e.message}", e)
+            _state.value = ConnectionState.DISCONNECTED
+            throw e
+        }
         val t1 = System.currentTimeMillis()
         dev.tsdroid.AppLogger.i(TAG, "Client() constructor OK (${t1 - t0}ms), ptr valid, calling waitConnected...")
         client = c
         _state.value = ConnectionState.CONNECTING
-        c.waitConnected()
-        val t2 = System.currentTimeMillis()
-        dev.tsdroid.AppLogger.i(TAG, "waitConnected OK (blocked ${t2 - t1}ms, total ${t2 - t0}ms)")
-        _state.value = ConnectionState.CONNECTED
-        val users = c.users
-        val channels = c.channels
-        Log.i(TAG, "After waitConnected: ${users?.size ?: "null"} users, ${channels?.size ?: "null"} channels")
-        if (users != null) {
-            for (u in users) {
-                if (u != null) Log.d(TAG, "  User: ${u.nickname} (id=${u.id}, ch=${u.channelId})")
+        try {
+            c.waitConnected()
+            val t2 = System.currentTimeMillis()
+            dev.tsdroid.AppLogger.i(TAG, "waitConnected OK (blocked ${t2 - t1}ms, total ${t2 - t0}ms)")
+            _state.value = ConnectionState.CONNECTED
+            val users = c.users
+            val channels = c.channels
+            Log.i(TAG, "After waitConnected: ${users?.size ?: "null"} users, ${channels?.size ?: "null"} channels")
+            if (users != null) {
+                for (u in users) {
+                    if (u != null) Log.d(TAG, "  User: ${u.nickname} (id=${u.id}, ch=${u.channelId})")
+                }
             }
+            refreshState()
+        } catch (e: Exception) {
+            dev.tsdroid.AppLogger.e(TAG, "waitConnected failed: ${e.message}", e)
+            _state.value = ConnectionState.DISCONNECTED
+            _channels.value = emptyList()
+            _users.value = emptyList()
+            _serverInfo.value = null
+            try { c.close() } catch (_: Exception) {}
+            client = null
+            throw e
         }
-        refreshState()
+        } finally {
+            connecting.set(false)
+        }
     }
 
     suspend fun eventLoop() {
         // Guard: only one event loop runs at a time
-        if (!eventLoopRunning.compareAndSet(false, true)) return
+        if (!eventLoopRunning.compareAndSet(false, true)) {
+            dev.tsdroid.AppLogger.w(TAG, "eventLoop already running, skipping")
+            return
+        }
+        dev.tsdroid.AppLogger.i(TAG, "Event loop started")
         try {
             withContext(Dispatchers.IO) {
                 var refreshCounter = 0
@@ -352,7 +385,7 @@ class TsClient {
         }.also { uploadCallbacks.remove(path) } ?: false
     }
 
-    fun disconnect() {
+    fun disconnect(updateState: Boolean = true) {
         val c = client ?: return
         // 1. Signal event loop to stop by nulling client
         client = null
@@ -365,11 +398,13 @@ class TsClient {
         }
         eventLoopRunning.set(false)
 
-        // 3. Update state flows
-        _state.value = ConnectionState.DISCONNECTED
-        _channels.value = emptyList()
-        _users.value = emptyList()
-        _serverInfo.value = null
+        // 3. Update state flows (skip during reconnect)
+        if (updateState) {
+            _state.value = ConnectionState.DISCONNECTED
+            _channels.value = emptyList()
+            _users.value = emptyList()
+            _serverInfo.value = null
+        }
 
         // 4. Now safe to call disconnect on the native client (no concurrent access)
         try {

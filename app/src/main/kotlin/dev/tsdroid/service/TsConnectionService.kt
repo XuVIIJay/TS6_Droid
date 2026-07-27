@@ -103,17 +103,23 @@ class TsConnectionService : Service() {
     fun connect(address: String, identity: Identity, nickname: String, password: String?, channel: String?) {
         dev.tsdroid.AppLogger.i(TAG, "Service connecting: addr=$address nick=$nickname")
         serviceScope.launch {
-            dev.tsdroid.AppLogger.i(TAG, "Launching tsClient.connect() on IO dispatcher...")
-            tsClient.connect(address, identity, nickname, password, channel)
-            dev.tsdroid.AppLogger.i(TAG, "tsClient.connect() returned, starting audio capture...")
-            audioBridge.startCapture(serviceScope)
-            // Sync initial mute state with server (PTT starts muted)
-            if (audioBridge.isMuted.value) {
-                tsClient.setInputMuted(true)
+            try {
+                dev.tsdroid.AppLogger.i(TAG, "Launching tsClient.connect() on IO dispatcher...")
+                tsClient.connect(address, identity, nickname, password, channel)
+                dev.tsdroid.AppLogger.i(TAG, "tsClient.connect() returned, starting audio capture...")
+                audioBridge.startCapture(serviceScope)
+                // Sync initial mute state with server (PTT starts muted)
+                if (audioBridge.isMuted.value) {
+                    tsClient.setInputMuted(true)
+                }
+                updateNotification()
+                // Start event loop
+                launch { tsClient.eventLoop() }
+            } catch (e: Exception) {
+                dev.tsdroid.AppLogger.e(TAG, "Connection failed: ${e.message}", e)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
             }
-            updateNotification()
-            // Start event loop
-            launch { tsClient.eventLoop() }
         }
     }
 

@@ -3,6 +3,7 @@ package dev.tsdroid
 import android.app.Application
 import android.util.Log
 import java.io.File
+import java.io.FileOutputStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.SimpleDateFormat
@@ -12,7 +13,7 @@ import java.util.Locale
 object AppLogger {
 
     private const val TAG = "AppLogger"
-    private const val MAX_LOG_BYTES = 512 * 1024 // 512 KB before rotation
+    private const val MAX_LOG_BYTES = 512 * 1024
 
     private var logDir: File? = null
     private var appLogFile: File? = null
@@ -30,9 +31,11 @@ object AppLogger {
             writeCrash(throwable)
             originalHandler?.uncaughtException(thread, throwable)
         }
+
+        i(TAG, "App started — logger ready")
     }
 
-    // --- Runtime logging ---
+    // --- Runtime logging (synced to disk immediately) ---
 
     @JvmStatic fun d(tag: String, msg: String) { log("D", tag, msg) }
     @JvmStatic fun i(tag: String, msg: String) { log("I", tag, msg) }
@@ -50,11 +53,17 @@ object AppLogger {
             val file = appLogFile ?: return
             val ts = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
             val line = "$ts $level/$tag: $msg\n"
+
             // Rotate if too large
             if (file.length() > MAX_LOG_BYTES) {
                 file.renameTo(File(file.parentFile, "app.1.log"))
             }
-            file.appendText(line)
+
+            // Append with fsync so data survives native crashes
+            FileOutputStream(file, true).use { fos ->
+                fos.write(line.toByteArray(Charsets.UTF_8))
+                fos.fd.sync()
+            }
         } catch (_: Exception) {}
     }
 
@@ -64,7 +73,7 @@ object AppLogger {
         log(level, tag, sw.toString())
     }
 
-    // --- Crash capture ---
+    // --- Crash capture (Java exceptions only) ---
 
     private fun writeCrash(throwable: Throwable) {
         try {
@@ -77,7 +86,7 @@ object AppLogger {
             val sw = StringWriter()
             throwable.printStackTrace(PrintWriter(sw))
 
-            file.writeText("""
+            val content = """
                 Time: $timestamp
                 Exception: ${throwable.javaClass.name}
                 Message: ${throwable.message ?: "(none)"}
@@ -87,7 +96,12 @@ object AppLogger {
 
                 Last app logs:
                 ${appLogFile?.readText()?.takeLast(8192) ?: "(none)"}
-            """.trimIndent())
+            """.trimIndent()
+
+            FileOutputStream(file).use { fos ->
+                fos.write(content.toByteArray(Charsets.UTF_8))
+                fos.fd.sync()
+            }
         } catch (_: Exception) {}
     }
 

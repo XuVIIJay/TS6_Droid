@@ -111,6 +111,8 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
         _connectionState.value = ConnectionState.CONNECTING
         _error.value = null
 
+        dev.tsdroid.AppLogger.i("ConnVM", "Connecting to $addr as $nick")
+
         val context = getApplication<Application>()
         TsConnectionService.start(context)
 

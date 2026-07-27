@@ -80,12 +80,14 @@ class TsClient {
     ) = withContext(Dispatchers.IO) {
         disconnect()
         serverAddress = address
+        dev.tsdroid.AppLogger.i(TAG, "Creating client: addr=$address nick=$nickname channel=${channel ?: "(none)"}")
         val c = Client(address, identity, nickname, password, channel)
         client = c
         _state.value = ConnectionState.CONNECTING
+        dev.tsdroid.AppLogger.i(TAG, "Calling waitConnected...")
         c.waitConnected()
+        dev.tsdroid.AppLogger.i(TAG, "waitConnected returned OK")
         _state.value = ConnectionState.CONNECTED
-        // Log immediately after waitConnected
         val users = c.users
         val channels = c.channels
         Log.i(TAG, "After waitConnected: ${users?.size ?: "null"} users, ${channels?.size ?: "null"} channels")

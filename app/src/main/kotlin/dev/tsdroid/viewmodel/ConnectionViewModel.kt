@@ -111,8 +111,6 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
         _connectionState.value = ConnectionState.CONNECTING
         _error.value = null
 
-        dev.tsdroid.AppLogger.i("ConnVM", "Connecting to $addr as $nick")
-
         val context = getApplication<Application>()
         TsConnectionService.start(context)
 
@@ -166,17 +164,11 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
         if (autoReconnectAttempted) return
         autoReconnectAttempted = true
         viewModelScope.launch {
-            try {
-                // Small delay so the system is stable before connecting
-                kotlinx.coroutines.delay(800)
-                val lastAddr = bookmarkStore.lastBookmarkAddress.first()
-                if (lastAddr.isEmpty()) return@launch
-                val list = bookmarkStore.bookmarks.first()
-                val bookmark = list.find { it.address == lastAddr } ?: return@launch
-                connectBookmark(bookmark, onConnected)
-            } catch (_: Exception) {
-                dev.tsdroid.AppLogger.w("ConnVM", "Auto-reconnect failed")
-            }
+            val lastAddr = bookmarkStore.lastBookmarkAddress.first()
+            if (lastAddr.isEmpty()) return@launch
+            val list = bookmarkStore.bookmarks.first()
+            val bookmark = list.find { it.address == lastAddr } ?: return@launch
+            connectBookmark(bookmark, onConnected)
         }
     }
 
@@ -294,29 +286,14 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
         _error.value = null
     }
 
-    private suspend fun getOrCreateIdentity(): Identity = withContext(Dispatchers.IO) {
+    private fun getOrCreateIdentity(): Identity {
         val context = getApplication<Application>()
         val identityFile = File(context.filesDir, "identity.ini")
-        dev.tsdroid.AppLogger.i("ConnVM", "Loading identity: path=${identityFile.absolutePath} exists=${identityFile.exists()} size=${identityFile.length()}")
-        if (identityFile.exists()) {
-            val id = Identity.load(identityFile.absolutePath)
-            val level = id.securityLevel
-            dev.tsdroid.AppLogger.i("ConnVM", "Identity loaded: uid=${id.uniqueId?.take(16)}... level=$level")
-            // Improve if level is too low
-            if (level < 23) {
-                dev.tsdroid.AppLogger.i("ConnVM", "Improving security level from $level to 23...")
-                id.improve(23)
-                id.save(identityFile.absolutePath)
-                dev.tsdroid.AppLogger.i("ConnVM", "Security level improved to ${id.securityLevel}")
-            }
-            id
+        return if (identityFile.exists()) {
+            Identity.load(identityFile.absolutePath)
         } else {
             val identity = Identity()
-            dev.tsdroid.AppLogger.i("ConnVM", "New identity created: uid=${identity.uniqueId?.take(16)}... level=${identity.securityLevel}")
-            dev.tsdroid.AppLogger.i("ConnVM", "Improving security level to 23 (this may take a moment)...")
-            identity.improve(23)
             identity.save(identityFile.absolutePath)
-            dev.tsdroid.AppLogger.i("ConnVM", "Identity ready: level=${identity.securityLevel}")
             identity
         }
     }

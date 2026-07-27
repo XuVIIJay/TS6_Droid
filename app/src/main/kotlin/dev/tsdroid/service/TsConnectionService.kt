@@ -15,7 +15,6 @@ import dev.tsdroid.TsDroidApp
 import dev.tsdroid.bridge.AudioBridge
 import dev.tsdroid.bridge.TsClient
 import dev.tslib.Identity
-import dev.tslib.ConnectionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -102,30 +101,16 @@ class TsConnectionService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     fun connect(address: String, identity: Identity, nickname: String, password: String?, channel: String?) {
-        dev.tsdroid.AppLogger.i(TAG, "Service connecting: addr=$address nick=$nickname")
         serviceScope.launch {
-            try {
-                val prevState = tsClient.state.value
-                dev.tsdroid.AppLogger.i(TAG, "Launching tsClient.connect() on IO dispatcher (prevState=$prevState)...")
-                tsClient.connect(address, identity, nickname, password, channel)
-                // If connect() returned but state didn't change to CONNECTED, it was
-                // either a duplicate guard hit or a failure — don't proceed
-                if (tsClient.state.value != ConnectionState.CONNECTED) {
-                    dev.tsdroid.AppLogger.w(TAG, "Not connected after connect() — state=${tsClient.state.value}, skipping audio/eventloop")
-                    return@launch
-                }
-                dev.tsdroid.AppLogger.i(TAG, "tsClient.connect() returned OK, starting audio capture...")
-                audioBridge.startCapture(serviceScope)
-                if (audioBridge.isMuted.value) {
-                    tsClient.setInputMuted(true)
-                }
-                updateNotification()
-                launch { tsClient.eventLoop() }
-            } catch (e: Exception) {
-                dev.tsdroid.AppLogger.e(TAG, "Connection failed: ${e.message}", e)
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+            tsClient.connect(address, identity, nickname, password, channel)
+            audioBridge.startCapture(serviceScope)
+            // Sync initial mute state with server (PTT starts muted)
+            if (audioBridge.isMuted.value) {
+                tsClient.setInputMuted(true)
             }
+            updateNotification()
+            // Start event loop
+            launch { tsClient.eventLoop() }
         }
     }
 

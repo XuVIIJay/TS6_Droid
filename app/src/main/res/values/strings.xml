@@ -95,6 +95,14 @@
     <string name="notif_unmute">Réactiver</string>
     <string name="notif_mute">Mute</string>
 
+    <!-- Log viewer -->
+    <string name="logs">Logs</string>
+    <string name="back">Retour</string>
+    <string name="no_logs">Aucun fichier de log</string>
+    <string name="runtime_log">Journal d\'exécution (app.log)</string>
+    <string name="delete_log_confirm">Supprimer %1$s ?</string>
+    <string name="empty_or_unreadable">(vide ou illisible)</string>
+
     <!-- ViewModel -->
     <string name="unknown_sender">Inconnu</string>
     <string name="me_sender">Moi</string>

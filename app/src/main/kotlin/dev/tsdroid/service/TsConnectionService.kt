@@ -100,9 +100,9 @@ class TsConnectionService : Service() {
 
     override fun onBind(intent: Intent?): IBinder = binder
 
-    fun connect(address: String, identity: Identity, nickname: String, password: String?) {
+    fun connect(address: String, identity: Identity, nickname: String, password: String?, channel: String?) {
         serviceScope.launch {
-            tsClient.connect(address, identity, nickname, password)
+            tsClient.connect(address, identity, nickname, password, channel)
             audioBridge.startCapture(serviceScope)
             // Sync initial mute state with server (PTT starts muted)
             if (audioBridge.isMuted.value) {

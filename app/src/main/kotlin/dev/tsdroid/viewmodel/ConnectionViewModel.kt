@@ -116,7 +116,11 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
 
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                val binder = service as TsConnectionService.LocalBinder
+                val binder = service as? TsConnectionService.LocalBinder ?: run {
+                    _connectionState.value = ConnectionState.DISCONNECTED
+                    _error.value = getApplication<Application>().getString(R.string.connection_failed)
+                    return
+                }
                 serviceBinder = binder
 
                 viewModelScope.launch {
@@ -124,7 +128,7 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
                         val identity = getOrCreateIdentity()
                         val pw = password.value.trim().takeIf { it.isNotEmpty() }
                         val ch = channel.value.trim().takeIf { it.isNotEmpty() }
-                        binder.tsClient.connect(addr, identity, nick, pw, ch)
+                        binder.service.connect(addr, identity, nick, pw, ch)
                         _connectionState.value = ConnectionState.CONNECTED
                         onConnected()
                     } catch (e: Exception) {

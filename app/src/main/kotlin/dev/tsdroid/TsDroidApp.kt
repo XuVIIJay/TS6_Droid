@@ -16,6 +16,7 @@ class TsDroidApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppLogger.install(this)
         createNotificationChannels()
     }
 

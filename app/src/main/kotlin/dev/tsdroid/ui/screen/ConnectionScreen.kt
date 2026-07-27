@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -68,6 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.tsdroid.R
 import dev.tslib.ConnectionState
 import dev.tsdroid.ui.component.ChannelTree
+import dev.tsdroid.ui.component.LogViewerDialog
 import dev.tsdroid.viewmodel.ConnectionViewModel
 import kotlinx.coroutines.launch
 
@@ -93,6 +95,7 @@ fun ConnectionScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var deleteConfirmIndex by remember { mutableStateOf<Int?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
+    var showLogViewer by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -126,7 +129,20 @@ fun ConnectionScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.app_name)) },
+                actions = {
+                    IconButton(onClick = { showLogViewer = true }) {
+                        Icon(
+                            Icons.Default.BugReport,
+                            contentDescription = "Logs",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showBottomSheet = true }) {
@@ -427,4 +443,6 @@ fun ConnectionScreen(
             }
         }
     }
+
+    LogViewerDialog(show = showLogViewer, onDismiss = { showLogViewer = false })
 }

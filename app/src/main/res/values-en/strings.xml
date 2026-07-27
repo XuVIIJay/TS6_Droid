@@ -56,6 +56,14 @@
     <!-- Notification -->
     <string name="notif_unmute">Unmute</string>
 
+    <!-- Log viewer -->
+    <string name="logs">Logs</string>
+    <string name="back">Back</string>
+    <string name="no_logs">No log files</string>
+    <string name="runtime_log">Runtime log (app.log)</string>
+    <string name="delete_log_confirm">Delete %1$s?</string>
+    <string name="empty_or_unreadable">(empty or unreadable)</string>
+
     <!-- ViewModel -->
     <string name="unknown_sender">Unknown</string>
     <string name="me_sender">Me</string>

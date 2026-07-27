@@ -52,6 +52,9 @@ fun ChannelTree(
     val treeItems = remember(channels, safeUsers) {
         val items = buildTreeItems(channels, safeUsers)
         Log.d("ChannelTree", "Built ${items.size} tree items (${items.count { it is TreeItem.ChannelNode }} channels, ${items.count { it is TreeItem.UserNode }} users) from ${channels.size} channels, ${safeUsers.size} users")
+        // One-time dump of channel names for spacer debugging
+        val names = channels.map { it.name }
+        dev.tsdroid.AppLogger.i("ChannelTree", "${channels.size} channels: $names")
         items
     }
     val userCountByChannel = remember(safeUsers) {
@@ -100,7 +103,7 @@ private fun ChannelRow(
     val spacer = remember(channel.name) { parseSpacer(channel.name) }
 
     if (spacer != null) {
-        Log.d("ChannelTree", "ChannelRow: spacer '${channel.name}' → ${spacer.type} text='${spacer.displayText}'")
+        dev.tsdroid.AppLogger.d("ChannelTree", "Spacer: '${channel.name}' → ${spacer.type}")
         SpacerChannelRow(spacer, depth)
     } else {
         Row(

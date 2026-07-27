@@ -9,9 +9,6 @@ app/build/
 local.properties
 gradle.properties
 
-# Native libs (built from tslib)
-app/src/main/jniLibs/
-
 # Signing
 *.keystore
 *.jks

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
@@ -24,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.tslib.Channel
 import dev.tslib.ChannelTree as JChannelTree
@@ -95,44 +98,89 @@ private fun ChannelRow(
     onClick: () -> Unit,
     icon: ImageBitmap? = null,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(
-                start = (depth * 24).dp,
-                top = 6.dp,
-                bottom = 6.dp,
-                end = 8.dp,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Image(
-                bitmap = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            Icon(
-                if (userCount > 0) Icons.Default.FolderOpen else Icons.Default.Folder,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+    val spacer = remember(channel.name) { parseSpacer(channel.name) }
+
+    if (spacer != null) {
+        when (spacer.type) {
+            SpacerType.REPEAT -> {
+                HorizontalDivider(
+                    modifier = Modifier.padding(
+                        start = (depth * 24).dp, top = 4.dp, bottom = 4.dp, end = 8.dp,
+                    ),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+            }
+            else -> {
+                val align = when (spacer.type) {
+                    SpacerType.CENTER -> TextAlign.Center
+                    SpacerType.RIGHT -> TextAlign.End
+                    else -> TextAlign.Start
+                }
+                val hasText = spacer.displayText.isNotEmpty()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = (depth * 24).dp,
+                            top = if (hasText) 4.dp else 2.dp,
+                            bottom = if (hasText) 4.dp else 2.dp,
+                            end = 8.dp,
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = spacer.displayText.ifEmpty { " " },
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = align,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = channel.name,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        if (userCount > 0) {
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(
+                    start = (depth * 24).dp,
+                    top = 6.dp,
+                    bottom = 6.dp,
+                    end = 8.dp,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Image(
+                    bitmap = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Icon(
+                    if (userCount > 0) Icons.Default.FolderOpen else Icons.Default.Folder,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
             Text(
-                text = "($userCount)",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = channel.name,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
             )
+            if (userCount > 0) {
+                Text(
+                    text = "($userCount)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
